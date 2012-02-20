@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
 from django.contrib.gis.db import models
-#from django.db import models
 from django.contrib.auth.models import User
 from settings import PROJECTION_SRID
 from django.utils.translation import ugettext_lazy as _
+from django.core.exceptions import ValidationError
 
 
 class Pathology(models.Model):
@@ -54,6 +54,7 @@ class Facility(models.Model):
     last_updated = models.DateField(auto_now=True)
     updated_by = models.ForeignKey(User, null=True, blank=True)
     expiration = models.DateField(null=True, blank=True)
+    open_24h = models.NullBooleanField()
 
     objects = models.GeoManager()
 
@@ -87,10 +88,12 @@ class OpeningTime(models.Model):
             self.opening, self.closing
         )
 
-    #def clean(self):
-        #from django.core.exceptions import ValidationError
-        #if self.opening > self.closing:
-            #raise ValidationError("Opening time should be before closing time.")
+    def save(self, *args, **kwargs):
+        if (self.opening and self.closing) and self.opening > self.closing:
+            raise ValidationError(
+                "Opening time should be before closing time."
+            )
+        super(OpeningTime, self).save(*args, **kwargs)
 
     class Meta:
         verbose_name = _('Opening Time')
